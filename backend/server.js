@@ -22,7 +22,7 @@ const state = {
 };
 
 /* =====================================================
-   에이전트 (🔥 핵심: 프롬프트 완전 유지)
+   에이전트
 ===================================================== */
 
 const agents = {
@@ -101,7 +101,7 @@ AI: 그냥
 function selectAgent(message) {
   if (state.conversationTurn <= 2) return "empathy";
 
-  if (message.includes("?")) return "archive";
+  if (message.includes("?") || message.includes("？")) return "archive";
 
   return ["archive", "empathy", "lazy"][
     Math.floor(Math.random() * 3)
@@ -135,6 +135,10 @@ ${message}
    API
 ===================================================== */
 
+app.get("/", (req, res) => {
+  res.send("server running");
+});
+
 app.get("/greeting", (req, res) => {
   state.conversationTurn = 0;
 
@@ -152,13 +156,23 @@ app.post("/chat", async (req, res) => {
   try {
     console.log("CHAT BODY:", req.body);
 
-    const result = await generateGeminiAnswer(req.body.message);
+    const message = req.body.message || "";
+    const agentKey = selectAgent(message);
+    const agent = agents[agentKey];
 
-    console.log("GEMINI RESULT:", result);
+    const answer = await generateAnswer(agentKey, message);
+
+    state.conversationTurn++;
 
     res.json({
-      reply: result?.reply || "응답을 만들지 못했어요.",
-      emoji: result?.emoji || "🙂",
+      reply: answer,
+      answer: answer,
+      emoji: agent.emoji,
+      agent: {
+        key: agentKey,
+        name: agent.name,
+        emoji: agent.emoji,
+      },
     });
   } catch (error) {
     console.error("CHAT ERROR:", error);
@@ -167,6 +181,7 @@ app.post("/chat", async (req, res) => {
       error: error.message,
       emoji: "⚠️",
       reply: "서버 오류가 발생했어요.",
+      answer: "서버 오류가 발생했어요.",
     });
   }
 });
