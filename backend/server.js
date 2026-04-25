@@ -171,11 +171,6 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-  } catch (err) {
-    res.status(500).json({ error: "fail" });
-  }
-});
-
 app.listen(3001, () => {
   console.log("server running");
 });
