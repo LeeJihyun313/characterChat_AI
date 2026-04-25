@@ -22,7 +22,7 @@ const state = {
 };
 
 /* =====================================================
-   에이전트
+   에이전트 (🔥 프롬프트 그대로 유지)
 ===================================================== */
 
 const agents = {
@@ -109,26 +109,41 @@ function selectAgent(message) {
 }
 
 /* =====================================================
-   Gemini 호출
+   Gemini + fallback
 ===================================================== */
 
 async function generateAnswer(agentKey, message) {
   const agent = agents[agentKey];
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: `
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash", // 🔥 무료 안정용
+      contents: `
 ${agent.prompt}
 
 사용자 입력:
 ${message}
 `,
-    generationConfig: {
-      maxOutputTokens: 150,
-    },
-  });
+      generationConfig: {
+        maxOutputTokens: 150,
+      },
+    });
 
-  return response.text;
+    return response.text;
+  } catch (error) {
+    console.error("GEMINI ERROR:", error);
+
+    // 🔥 fallback (프롬프트 스타일 유지)
+    if (agentKey === "lazy") {
+      return "귀찮은데… 대충 맞는 방향 같음.";
+    }
+
+    if (agentKey === "archive") {
+      return `흥미로운 질문입니다. "${message}"라는 표현은 단순한 정보 전달이 아니라, 하나의 해석 가능한 구조로 볼 수 있습니다. 다만 현재 AI 응답 한도가 초과되어 임시적으로 대체된 응답을 제공드립니다.`;
+    }
+
+    return `음… "${message}"라고 말한 순간, 이미 당신은 어떤 감정이나 상태를 내포하고 있었던 것 같아요. 지금은 AI 응답 제한 때문에 깊은 답변을 드리긴 어렵지만, 적어도 이 대화는 계속 이어질 수 있어요.`;
+  }
 }
 
 /* =====================================================
@@ -154,9 +169,8 @@ app.get("/greeting", (req, res) => {
 
 app.post("/chat", async (req, res) => {
   try {
-    console.log("CHAT BODY:", req.body);
-
     const message = req.body.message || "";
+
     const agentKey = selectAgent(message);
     const agent = agents[agentKey];
 
@@ -179,12 +193,16 @@ app.post("/chat", async (req, res) => {
 
     res.status(500).json({
       error: error.message,
-      emoji: "⚠️",
       reply: "서버 오류가 발생했어요.",
       answer: "서버 오류가 발생했어요.",
+      emoji: "⚠️",
     });
   }
 });
+
+/* =====================================================
+   서버 실행
+===================================================== */
 
 app.listen(3001, () => {
   console.log("server running");
