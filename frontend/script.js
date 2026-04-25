@@ -1,58 +1,78 @@
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
-const sendButton = document.getElementById("sendButton");
 
-function addMessage({ type, title, text }) {
+function addMessage(text, type) {
   const div = document.createElement("div");
   div.className = `message ${type}`;
-  div.innerHTML = `<strong>${title}</strong><p></p>`;
-  div.querySelector("p").innerText = text;
+  div.innerText = text;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
+}
+
+function addTypingMessage(text, type) {
+  const div = document.createElement("div");
+  div.className = `message ${type}`;
+  chat.appendChild(div);
+
+  let index = 0;
+
+  const timer = setInterval(() => {
+    div.innerText = text.slice(0, index);
+    index++;
+
+    chat.scrollTop = chat.scrollHeight;
+
+    if (index > text.length) {
+      clearInterval(timer);
+    }
+  }, 25);
 }
 
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  addMessage({ type: "user", title: "👤 사용자", text });
+  addMessage(text, "user");
   input.value = "";
-  sendButton.disabled = true;
-  sendButton.innerText = "대기";
+
+  addMessage("누군가 끼어드는 중...", "system");
 
   try {
     const res = await fetch("https://characterchat-ai.onrender.com/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text }),
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message: text })
     });
 
     const data = await res.json();
 
-    if (!res.ok) {
-      addMessage({ type: "system", title: "📡 System", text: data.detail || data.error || "서버 오류" });
-      return;
+    const loadingMessages = document.querySelectorAll(".message.system");
+    const lastLoading = loadingMessages[loadingMessages.length - 1];
+
+    if (lastLoading && lastLoading.innerText === "누군가 끼어드는 중...") {
+      lastLoading.remove();
     }
 
     if (data.transition) {
-      addMessage({ type: "system", title: "🎭 전환", text: data.transition });
+      addTypingMessage(data.transition, "system");
     }
 
-    addMessage({
-      type: data.agent.key,
-      title: `${data.agent.emoji} ${data.agent.name}`,
-      text: data.answer,
-    });
-  } catch (error) {
-    addMessage({ type: "system", title: "📡 System", text: "서버 연결 실패. backend가 켜져 있는지 확인해." });
-  } finally {
-    sendButton.disabled = false;
-    sendButton.innerText = "전송";
-    input.focus();
+    setTimeout(() => {
+      addTypingMessage(
+        `${data.agent.emoji} ${data.agent.name}\n${data.answer}`,
+        data.agent.key
+      );
+    }, data.transition ? 800 : 0);
+
+  } catch (err) {
+    addMessage("서버 연결 실패", "system");
   }
 }
 
-sendButton.addEventListener("click", sendMessage);
-input.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") sendMessage();
+input.addEventListener("keydown", function (event) {
+  if (event.key === "Enter") {
+    sendMessage();
+  }
 });
