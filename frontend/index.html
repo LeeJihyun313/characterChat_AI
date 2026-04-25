@@ -1,31 +1,43 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI들이 나를 가만두지 않는다</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UNAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
+<div class="container">
     <header>
-      <h1>AI들이 나를 가만두지 않는다</h1>
-      <p>사용자가 AI를 고르는 게 아니라, AI가 사용자를 고릅니다.</p>
+        <div class="header-left">
+            <div class="header-tag">Live System</div>
+            <h1>질문이 있나요?</h1>
+            <p>각자의 색다른 AI들이 당신의 고민을 해결해줍니다.</p>
+        </div>
+        <div class="agent-roster">
+            <div class="agent-dot archive" title="Archive"></div>
+            <div class="agent-dot empathy" title="Empathy"></div>
+            <div class="agent-dot decision" title="Decision"></div>
+            <div class="agent-dot lazy" title="Lazy"></div>
+        </div>
     </header>
 
     <main id="chat" class="chat">
-      <div class="message system">
-        <strong>📡 System</strong>
-        <p>AI 선택권은 없습니다. 입력하면 알아서 누군가 튀어나옵니다.</p>
-      </div>
+        <div class="message system intro">
+            <strong>📡 System</strong>
+            AI 선택권은 없습니다. 입력하면 알아서 누군가 튀어나옵니다.
+        </div>
     </main>
 
     <footer class="input-area">
-      <input id="input" placeholder="예: 1+1 뭐야? / 뭐 먹지? / 답만 알려줘" />
-      <button id="sendButton">전송</button>
+        <div class="input-wrap">
+            <input id="input" placeholder="예: 1+1 뭐야? / 뭐 먹지? / 답만 알려줘" />
+        </div>
+        <button id="sendButton">전송</button>
     </footer>
-  </div>
+</div>
 
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>

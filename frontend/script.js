@@ -1,5 +1,6 @@
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
+const sendButton = document.getElementById("sendButton");
 
 function addMessage(text, type) {
   const div = document.createElement("div");
@@ -15,17 +16,12 @@ function addTypingMessage(text, type) {
   chat.appendChild(div);
 
   let index = 0;
-
   const timer = setInterval(() => {
     div.innerText = text.slice(0, index);
     index++;
-
     chat.scrollTop = chat.scrollHeight;
-
-    if (index > text.length) {
-      clearInterval(timer);
-    }
-  }, 25);
+    if (index > text.length) clearInterval(timer);
+  }, 22);
 }
 
 async function sendMessage() {
@@ -34,15 +30,14 @@ async function sendMessage() {
 
   addMessage(text, "user");
   input.value = "";
+  sendButton.disabled = true;
 
   addMessage("누군가 끼어드는 중...", "system");
 
   try {
     const res = await fetch("https://characterchat-ai.onrender.com/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text })
     });
 
@@ -50,7 +45,6 @@ async function sendMessage() {
 
     const loadingMessages = document.querySelectorAll(".message.system");
     const lastLoading = loadingMessages[loadingMessages.length - 1];
-
     if (lastLoading && lastLoading.innerText === "누군가 끼어드는 중...") {
       lastLoading.remove();
     }
@@ -68,11 +62,13 @@ async function sendMessage() {
 
   } catch (err) {
     addMessage("서버 연결 실패", "system");
+  } finally {
+    sendButton.disabled = false;
+    input.focus();
   }
 }
 
-input.addEventListener("keydown", function (event) {
-  if (event.key === "Enter") {
-    sendMessage();
-  }
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
 });
+sendButton.addEventListener("click", sendMessage);
