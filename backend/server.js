@@ -105,7 +105,7 @@ function calculateUselessAffection(message) {
 }
 
 /* =====================================================
-   Gemini 호출 (추가 기능만 넣음)
+   Gemini 호출 (속도 개선 적용)
 ===================================================== */
 
 async function generateGeminiAnswer(agentKey, userMessage, analysis) {
@@ -144,6 +144,11 @@ ${fakeLayer}
 사용자 입력:
 ${userMessage}
 `,
+
+    // ⭐ 핵심 속도 개선
+    generationConfig: {
+      maxOutputTokens: 120
+    }
   });
 
   return response.text;
