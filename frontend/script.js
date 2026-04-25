@@ -31,11 +31,11 @@ function addTypingMessage(text, type) {
     chat.scrollTop = chat.scrollHeight;
 
     if (index > text.length) clearInterval(timer);
-  }, 12); // ⭐ 속도 개선
+  }, 12);
 }
 
 /* =========================
-   ⭐ 로딩 UI (핵심)
+   로딩 UI
 ========================= */
 
 function addLoadingMessage() {
@@ -55,10 +55,8 @@ function addLoadingMessage() {
 
   const interval = setInterval(() => {
     dots = dots.length < 3 ? dots + "." : "";
-
     div.innerText = messages[msgIndex] + dots;
 
-    // 랜덤으로 메시지 바뀜 (쓸데없는 연출)
     if (Math.random() < 0.25) {
       msgIndex = (msgIndex + 1) % messages.length;
     }
@@ -67,6 +65,20 @@ function addLoadingMessage() {
   }, 400);
 
   return { div, interval };
+}
+
+/* =========================
+   로딩 제거
+========================= */
+
+function removeLoader(loader) {
+  if (!loader) return;
+
+  clearInterval(loader.interval);
+
+  if (loader.div && loader.div.parentNode) {
+    loader.div.remove();
+  }
 }
 
 /* =========================
@@ -81,37 +93,32 @@ async function sendMessage() {
   input.value = "";
   sendButton.disabled = true;
 
-  // ⭐ 로딩 시작
-  let loader = null;
-
-  try {
-    loader = addLoadingMessage();
-  } catch (e) {
-    console.log("로딩 UI 오류:", e);
-  }
-
-  if (loader) {
-    clearInterval(loader.interval);
-    loader.div.remove();
-  }
+  const loader = addLoadingMessage();
 
   try {
     const res = await fetch("https://characterchat-ai.onrender.com/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ message: text })
     });
 
     const data = await res.json();
-    if (!res.ok || !data.agent) {
+
+    removeLoader(loader);
+
+    if (!res.ok) {
       console.error("백엔드 에러:", data);
       addMessage(`서버 오류: ${data.error || "알 수 없는 오류"}`, "system");
       return;
     }
 
-    // ⭐ 로딩 제거
-    clearInterval(loader.interval);
-    loader.div.remove();
+    if (!data.agent) {
+      console.error("agent 없음:", data);
+      addMessage("서버 응답 형식 오류: agent 정보가 없습니다.", "system");
+      return;
+    }
 
     if (data.transition) {
       addTypingMessage(data.transition, "system");
@@ -119,16 +126,14 @@ async function sendMessage() {
 
     setTimeout(() => {
       addTypingMessage(
-        `${data.agent.emoji} ${data.agent.name}\n${data.answer}`,
-        data.agent.key
+        `${data.agent.emoji || "🙂"} ${data.agent.name || "AI"}\n${data.reply || data.answer || "응답이 없습니다."}`,
+        data.agent.key || "system"
       );
     }, data.transition ? 500 : 0);
 
   } catch (err) {
-    // ⭐ 에러 시에도 로딩 제거
-    clearInterval(loader.interval);
-    loader.div.remove();
-
+    removeLoader(loader);
+    console.error("서버 연결 실패:", err);
     addMessage("서버 연결 실패", "system");
   } finally {
     sendButton.disabled = false;
