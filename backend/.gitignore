@@ -5,6 +5,7 @@ out/
 .kotlin
 
 ### Eclipse ###
+.env
 .apt_generated
 .classpath
 .factorypath
