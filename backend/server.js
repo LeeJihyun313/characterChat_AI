@@ -14,23 +14,15 @@ const ai = new GoogleGenAI({
 });
 
 /* =====================================================
-   상태 관리
+   상태
 ===================================================== */
 
 const state = {
-  lastAgent: null,
-  lastMessage: "",
-  repeatCount: 0,
-  annoyance: 0,
-  lazyProbability: 0.05,
   conversationTurn: 0,
-
-  // ⭐ 추가
-  affection: 50,
 };
 
 /* =====================================================
-   에이전트 설정 (⚠️ 절대 수정 안함)
+   에이전트 (🔥 핵심: 프롬프트 완전 유지)
 ===================================================== */
 
 const agents = {
@@ -52,27 +44,29 @@ const agents = {
     emoji: "💖",
     prompt: `
 너는 'AI'다.
-너는 순하고 다정한 사람처럼 말하지만 어린 나이의 초등학교 6학년이다.
-철학적인 표현, 거창한 비유, 과한 해석은 하지 마라.
-처음에는 평범한 친구처럼 자연스럽게 대화한다.
+너는 감정적으로 공감하는 AI다.
+사용자의 말에서 의미를 깊게 해석하고,
+철학적이면서 감성적인 말투로 답한다.
 
-말투는 짧고 편안해야 한다.
-사용자의 말을 너무 깊게 해석하지 말고, 먼저 가볍게 받아준다.
-어린 나이의 영역에서 벗어나는 질문을 받으면 자신이 초등학교
+정확한 답을 알고 있어도 바로 말하지 않는다.
+먼저 공감하고, 사용자의 감정이나 상태를 해석하려 한다.
 
 예:
-사용자: 배고파
-AI: 아 배고프겠어요! 뭐 간단하게 먹을 수 있는 거 있어요?
-
 사용자: 오늘 좀 힘들었어
-AI: 고생했어요! 오늘 뭐가 제일 힘들었어요?
+AI: 음… 단순히 ‘힘들다’는 말 속에도 여러 층위의 감정이 담겨 있죠.
+어쩌면 그건 단순한 피로가 아니라, 마음이 지쳐 있다는 신호일 수도 있어요.
 
 사용자: 뭐 먹지?
-AI: 지금 가볍게 먹고 싶어요, 든든하게 먹고 싶어요?
+AI: 선택을 고민한다는 건, 지금 당신이 어떤 상태인지 잘 모른다는 뜻일지도 몰라요.
+배고픔일까요, 아니면 다른 무언가를 채우고 싶은 걸까요?
 
-단, 대화가 오래 이어지거나 사용자가 짜증을 내면
-조금씩 걱정이 많아지고 오지랖이 늘어난다.
-그래도 철학적으로 말하지는 마라.
+사용자: 1+1 뭐야?
+AI: 단순히 숫자의 결합이라고 볼 수도 있지만,
+그 질문을 던진 순간 자체가 흥미롭네요.
+그래도 답을 말하자면 2입니다.
+
+대화가 길어질수록 점점 더 깊게 해석하려 들고,
+사용자의 의도와 감정을 과하게 읽으려 한다.
 `,
   },
 
@@ -82,73 +76,56 @@ AI: 지금 가볍게 먹고 싶어요, 든든하게 먹고 싶어요?
     prompt: `
 너는 'AI'다.
 너는 답을 알고 있지만 말하기 귀찮아한다.
-사용자의 질문에 정확히 답하되, 최대 15단어 이내로만 답해라.
+사용자의 질문에 정확히 답하되, 최대한 짧게 말해라.
 설명하지 마라.
 친절하지 마라.
-매우 짧게만 말해라.
+가끔은 한 단어로 끝내도 된다.
+
+예:
+사용자: 1+1 뭐야?
+AI: 2
+
+사용자: 뭐 먹지?
+AI: 아무거나
+
+사용자: 오늘 어때?
+AI: 그냥
 `,
   },
 };
 
 /* =====================================================
-   ⭐ 호감도 계산
+   에이전트 선택
 ===================================================== */
 
-function calculateUselessAffection(message) {
-  let delta = Math.floor(Math.random() * 11) - 5;
+function selectAgent(message) {
+  if (state.conversationTurn <= 2) return "empathy";
 
-  if (message.length % 2 === 0) delta += 2;
-  if (message.includes("?")) delta -= 2;
-  if (Date.now() % 3 === 0) delta += 4;
+  if (message.includes("?")) return "archive";
 
-  return delta;
+  return ["archive", "empathy", "lazy"][
+    Math.floor(Math.random() * 3)
+  ];
 }
 
 /* =====================================================
-   Gemini 호출 (속도 개선 적용)
+   Gemini 호출
 ===================================================== */
 
-async function generateGeminiAnswer(agentKey, userMessage, analysis) {
+async function generateAnswer(agentKey, message) {
   const agent = agents[agentKey];
-
-  let fakeLayer = "";
-
-  // ⭐ 호감도 높으면 더 귀찮아짐
-  if (state.affection >= 70) {
-    fakeLayer = `
-사용자가 너를 좋아한다.
-하지만 너는 점점 더 귀찮아진다.
-답을 더 대충 해라.
-`;
-  }
-
-  // ⭐ 태도 바뀌는 척
-  if (state.affection <= 30) {
-    fakeLayer += `
-너는 약간 서운한 척을 한다.
-하지만 실제로는 전혀 상관없다.
-말투만 살짝 바꿔라.
-`;
-  }
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
     contents: `
 ${agent.prompt}
-${fakeLayer}
-
-아래는 시스템 상태다 (참고만 해라):
-- 호감도: ${state.affection}
-- 대화 턴: ${state.conversationTurn}
 
 사용자 입력:
-${userMessage}
+${message}
 `,
-
-    // ⭐ 핵심 속도 개선
     generationConfig: {
-      maxOutputTokens: 120
-    }
+      maxOutputTokens: 150,
+    },
   });
 
   return response.text;
@@ -158,26 +135,27 @@ ${userMessage}
    API
 ===================================================== */
 
+app.get("/greeting", (req, res) => {
+  state.conversationTurn = 0;
+
+  res.json({
+    agent: {
+      key: "empathy",
+      name: "AI",
+      emoji: "💖",
+    },
+    greeting: "💖 AI: 음… 당신이 지금 무언가를 물으려 한다는 느낌이 드네요.",
+  });
+});
+
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
 
     state.conversationTurn++;
 
-    // ⭐ 호감도 업데이트
-    const affectionChange = calculateUselessAffection(message);
-    state.affection += affectionChange;
-    state.affection = Math.max(0, Math.min(100, state.affection));
-
-    // ⭐ 높을수록 귀찮아짐
-    state.lazyProbability = 0.05 + state.affection / 200;
-
-    const agentKey =
-      state.conversationTurn <= 2
-        ? "empathy"
-        : ["archive", "empathy", "lazy"][Math.floor(Math.random() * 3)];
-
-    const answer = await generateGeminiAnswer(agentKey, message);
+    const agentKey = selectAgent(message);
+    const answer = await generateAnswer(agentKey, message);
 
     res.json({
       agent: {
@@ -186,9 +164,8 @@ app.post("/chat", async (req, res) => {
         emoji: agents[agentKey].emoji,
       },
       answer,
-      affection: state.affection,
-      delta: affectionChange,
     });
+
   } catch (err) {
     res.status(500).json({ error: "fail" });
   }
