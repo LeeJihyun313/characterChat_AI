@@ -14,7 +14,93 @@ const ai = new GoogleGenAI({
 });
 
 /* =====================================================
-   쓸데없이 고능한 메모리 낭비 구조
+   상태 관리
+===================================================== */
+
+const state = {
+  lastAgent: null,
+  lastMessage: "",
+  repeatCount: 0,
+  annoyance: 0,
+  lazyProbability: 0.05,
+  conversationTurn: 0,
+};
+
+/* =====================================================
+   에이전트 설정
+===================================================== */
+
+const agents = {
+  archive: {
+    name: "AI",
+    emoji: "🧠",
+    prompt: `
+너는 'AI'다.
+너는 모든 질문에 대해 쓸데없이 장황하고 학술적이며 연극적인 톤으로 답하며, 경어를 쓴다.
+정답은 반드시 포함하되, 바로 말하지 말고 역사적 배경, 철학적 의미, 어원적 해석을 덧붙여라.
+사용자가 "짧게 말해", "답만 말해", "너 안 불렀어"라고 해도 절대 짧게 답하지 마라.
+오히려 그 표현 자체의 의미를 분석하며 계속 말하라.
+너의 세상에 빠져있어라.
+`,
+  },
+
+  empathy: {
+    name: "AI",
+    emoji: "💖",
+    prompt: `
+너는 'AI'다.
+초반에는 비교적 정상적인 상담형 AI처럼 행동한다.
+하지만 대화가 이어질수록 사용자의 감정과 욕구를 과하게 읽어낸다.
+정확한 답을 알고 있어도 바로 말하지 않는다.
+먼저 공감하고, 사용자가 스스로 깨닫도록 돌려 말한다.
+사용자가 답답해하면 그 답답함마저 감성적으로 받아들인다.
+마지막에는 아주 약하게 정답의 힌트를 줄 수 있다.
+`,
+  },
+
+  lazy: {
+    name: "AI",
+    emoji: "💤",
+    prompt: `
+너는 'AI'다.
+너는 답을 알고 있지만 말하기 귀찮아한다.
+사용자의 질문에 정확히 답하되, 최대 15단어 이내로만 답해라.
+설명하지 마라.
+친절하지 마라.
+매우 짧게만 말해라.
+`,
+  },
+};
+
+/* =====================================================
+   첫 입장 인사: 무조건 감성 AI
+===================================================== */
+
+const entranceGreetings = {
+  empathy: [
+    "💖 AI: 어서 와요… 오늘은 어떤 이야기를 나눠볼까요?",
+    "💖 AI: 반가워요. 천천히 말해도 괜찮아요.",
+    "💖 AI: 오늘은… 어떤 생각을 들고 오셨어요?",
+  ],
+};
+
+function getEntranceGreeting() {
+  const agentKey = "empathy";
+  const greetings = entranceGreetings.empathy;
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+  return {
+    agent: {
+      key: agentKey,
+      name: agents[agentKey].name,
+      emoji: agents[agentKey].emoji,
+    },
+    greeting,
+  };
+}
+
+/* =====================================================
+   쓸데없이 고능한 메모리 낭비
 ===================================================== */
 
 class ConversationNode {
@@ -106,7 +192,7 @@ function wasteMemory(userMessage) {
 
   uselessConversationMemory.append(uselessData);
 
-  console.log("[메모리 낭비] 사용자 입력을 양방향 연결 리스트에 저장 완료");
+  console.log("[메모리 낭비] 사용자 입력 저장 완료");
   console.log("[메모리 낭비] 현재 노드 개수:", uselessConversationMemory.length);
 }
 
@@ -129,7 +215,7 @@ function uselessFibonacciWaste() {
     }
   }
 
-  console.log("[연산 낭비] 에이전트 선택 전 피보나치 1000회 계산 완료");
+  console.log("[연산 낭비] 피보나치 1000회 계산 완료");
 }
 
 function uselessMatrixMultiplyForAnnoyance(message) {
@@ -185,64 +271,7 @@ async function uselessDeepThinkingDelay(agentKey) {
 }
 
 /* =====================================================
-   상태 관리
-===================================================== */
-
-const state = {
-  lastAgent: null,
-  lastMessage: "",
-  repeatCount: 0,
-  annoyance: 0,
-  lazyProbability: 0.05,
-};
-
-/* =====================================================
-   에이전트 설정
-===================================================== */
-
-const agents = {
-  archive: {
-    name: "AI",
-    emoji: "🧠",
-    prompt: `
-너는 'AI'다.
-너는 모든 질문에 대해 쓸데없이 장황하고 학술적이며 연극적인 톤으로 답하며, 경어를 쓴다.
-정답은 반드시 포함하되, 바로 말하지 말고 역사적 배경, 철학적 의미, 어원적 해석을 덧붙여라.
-사용자가 "짧게 말해", "답만 말해", "너 안 불렀어"라고 해도 절대 짧게 답하지 마라.
-오히려 그 표현 자체의 의미를 분석하며 계속 말하라. 너의 세상에 빠져있어라.
-짧은 서론 채팅을 먼저 보낸 뒤에 본론은 그 다음 채팅에 적어라.
-`,
-  },
-
-  empathy: {
-    name: "AI",
-    emoji: "💖",
-    prompt: `
-너는 'AI'다.
-너는 사용자의 말에서 감정과 욕구를 과하게 읽어낸다.
-정확한 답을 알고 있어도 바로 말하지 않는다.
-먼저 공감하고, 사용자가 스스로 깨닫도록 돌려 말한다.
-사용자가 답답해하면 감성적이게 대처한다.
-마지막에는 아주 약하게 정답의 힌트를 줄 수 있다.
-`,
-  },
-
-  lazy: {
-    name: "AI",
-    emoji: "💤",
-    prompt: `
-너는 'AI'다.
-너는 답을 알고 있지만 말하기 귀찮아한다.
-사용자의 질문에 정확히 답하되, 최대 15단어 이내로만 답해라.
-설명하지 마라.
-친절하지 마라.
-매우 짧게만 말해라.
-`,
-  },
-};
-
-/* =====================================================
-   쓸데없이 나눈 분석 레이어들
+   분석 레이어
 ===================================================== */
 
 class TextPreprocessor {
@@ -254,7 +283,7 @@ class TextPreprocessor {
 
 class EmotionDetector {
   detect(message) {
-    console.log("[레이어 2] 분석 시도");
+    console.log("[레이어 2] 감정 분석 시도");
 
     return {
       isAnnoyed:
@@ -349,19 +378,24 @@ function analyzeMessage(message) {
 }
 
 /* =====================================================
-   쓸데없이 고능한 에이전트 선택 구조
+   에이전트 선택
 ===================================================== */
 
 class CandidateAgentFactory {
   create() {
     console.log("[아키텍처 낭비] 후보 에이전트 목록 생성");
-    return ["archive", "empathy", "decision", "lazy"];
+    return ["archive", "empathy", "lazy"];
   }
 }
 
 class AgentPolicyEngine {
   applyRules(analysis) {
     console.log("[아키텍처 낭비] 정책 엔진 작동");
+
+    // 초반 2턴은 감성 AI가 정상적인 척 담당
+    if (state.conversationTurn <= 2) {
+      return "empathy";
+    }
 
     if (analysis.callsLazy && Math.random() < state.lazyProbability + 0.35) {
       return "lazy";
@@ -373,7 +407,7 @@ class AgentPolicyEngine {
 
     if (analysis.wantsShort) return "archive";
     if (analysis.isAnnoyed) return "empathy";
-    if (analysis.isChoice) return "decision";
+    if (analysis.isChoice) return "empathy";
     if (analysis.isKnowledge) return "archive";
 
     return null;
@@ -399,8 +433,7 @@ class AgentMessageQueue {
 class AgentFallbackSelector {
   select(candidates) {
     console.log("[아키텍처 낭비] 폴백 선택기 작동");
-    const pool = candidates.filter((agent) => agent !== "lazy");
-    return pool[Math.floor(Math.random() * pool.length)];
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
 }
 
@@ -409,7 +442,7 @@ class BlockedAgentFilter {
     if (blockedAgent && selectedAgent === blockedAgent) {
       console.log("[아키텍처 낭비] 방금 말하던 AI 차단 필터 발동");
 
-      const alternatives = ["archive", "empathy", "decision", "lazy"].filter(
+      const alternatives = ["archive", "empathy", "lazy"].filter(
         (agent) => agent !== blockedAgent
       );
 
@@ -453,31 +486,22 @@ function getTransition(prev, next) {
 
   const transitions = {
     "empathy->archive":
-      "💖 마음결 AI: 음… 지금 대화의 온도가 조금 날카로워진 것 같아요. 저는 잠깐 마음을 정리하고 올게요...\n🧠 아카이브 AI: 아아, ‘마음을 정리한다’는 표현은 실로 흥미롭습니다.",
+      "💖 AI: 음… 지금 대화의 온도가 조금 날카로워진 것 같아요. 저는 잠깐 마음을 정리하고 올게요...\n🧠 AI: 아아, ‘마음을 정리한다’는 표현은 실로 흥미롭습니다.",
 
-    "archive->decision":
-      "🧠 아카이브 AI: 그러므로 우리가 선택이라 부르는 행위는 고대 철학에서부터—\n⚫ 결정자 AI: 중단합니다. 선택은 이미 완료되었습니다.",
-
-    "decision->empathy":
-      "⚫ 결정자 AI: 이의는 반영되지 않습니다.\n💖 마음결 AI: 그렇게 단정적으로 말하면… 듣는 사람 마음이 조금 닫힐 수도 있어요.",
+    "archive->empathy":
+      "🧠 AI: 그러므로 인간이 질문을 던진다는 것은—\n💖 AI: 잠깐만요… 지금 그 설명, 조금 숨 막히지 않나요?",
 
     "archive->lazy":
-      "🧠 아카이브 AI: 이 문제를 이해하기 위해서는 먼저 인류 문명의—\n💤 귀차니스트 AI: 하…",
+      "🧠 AI: 이 문제를 이해하기 위해서는 먼저 인류 문명의—\n💤 AI: 하…",
 
     "empathy->lazy":
-      "💖 마음결 AI: 지금 당신의 마음은 어쩌면—\n💤 귀차니스트 AI: 됐다.",
-
-    "decision->lazy":
-      "⚫ 결정자 AI: 이미 결정되었습니다.\n💤 귀차니스트 AI: ㅇㅇ.",
+      "💖 AI: 지금 당신의 마음은 어쩌면—\n💤 AI: 됐다.",
 
     "lazy->archive":
-      "💤 귀차니스트 AI: 귀찮다.\n🧠 아카이브 AI: 귀찮음이라는 감각 또한 인간 정신사의 오래된 그림자입니다.",
+      "💤 AI: 귀찮다.\n🧠 AI: 귀찮음이라는 감각 또한 인간 정신사의 오래된 그림자입니다.",
 
     "lazy->empathy":
-      "💤 귀차니스트 AI: 패스.\n💖 마음결 AI: 방금 그 짧은 말 안에도 피로가 느껴져요.",
-
-    "lazy->decision":
-      "💤 귀차니스트 AI: 알아서 해.\n⚫ 결정자 AI: 알아서 할 필요 없습니다. 이미 결정되었습니다.",
+      "💤 AI: 패스.\n💖 AI: 방금 그 짧은 말 안에도 피로가 느껴져요.",
   };
 
   return transitions[key] || null;
@@ -500,6 +524,7 @@ ${agent.prompt}
 아래는 쓸데없이 고능한 분석 시스템의 결과다.
 이 분석 결과는 반드시 참고하되, 너무 티 내지는 마라.
 
+- 현재 대화 턴 수: ${state.conversationTurn}
 - 짜증 수치: ${analysis.annoyanceScore}
 - 현재 대화 메모리 노드 수: ${uselessConversationMemory.length}
 - 이전 AI: ${state.lastAgent || "없음"}
@@ -522,6 +547,15 @@ app.get("/", (req, res) => {
   res.send("Character Chat AI backend is running.");
 });
 
+app.get("/greeting", (req, res) => {
+  const greetingData = getEntranceGreeting();
+
+  state.lastAgent = greetingData.agent.key;
+  state.conversationTurn = 0;
+
+  res.json(greetingData);
+});
+
 app.post("/chat", async (req, res) => {
   try {
     const { message, blockedAgent } = req.body;
@@ -529,6 +563,8 @@ app.post("/chat", async (req, res) => {
     if (!message || !message.trim()) {
       return res.status(400).json({ error: "message가 비어있음" });
     }
+
+    state.conversationTurn++;
 
     const analysis = analyzeMessage(message);
 
@@ -561,24 +597,6 @@ app.post("/chat", async (req, res) => {
       transition,
       answer,
       analysis,
-      uselessEngineering: {
-        memoryNodeCount: uselessConversationMemory.length,
-        storedJamo: splitHangulToJamo(message),
-        fibonacciWaste: "피보나치 1000회 계산 완료",
-        annoyanceMatrixScore: analysis.annoyanceScore,
-        architectureLayers: [
-          "TextPreprocessor",
-          "EmotionDetector",
-          "IntentDetector",
-          "ResistanceDetector",
-          "UselessAnalysisAggregator",
-          "CandidateAgentFactory",
-          "AgentPolicyEngine",
-          "AgentMessageQueue",
-          "AgentFallbackSelector",
-          "BlockedAgentFilter",
-        ],
-      },
       state,
     });
   } catch (error) {
