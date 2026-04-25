@@ -343,3 +343,8 @@ header p {
   letter-spacing: 0.05em;
   opacity: 0.8;
 }
+
+.message.loading {
+  opacity: 0.6;
+  font-style: italic;
+}
