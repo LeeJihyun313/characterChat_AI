@@ -82,7 +82,18 @@ async function sendMessage() {
   sendButton.disabled = true;
 
   // ⭐ 로딩 시작
-  const loader = addLoadingMessage();
+  let loader = null;
+
+  try {
+    loader = addLoadingMessage();
+  } catch (e) {
+    console.log("로딩 UI 오류:", e);
+  }
+
+  if (loader) {
+    clearInterval(loader.interval);
+    loader.div.remove();
+  }
 
   try {
     const res = await fetch("https://characterchat-ai.onrender.com/chat", {
