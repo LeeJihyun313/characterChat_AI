@@ -150,21 +150,26 @@ app.get("/greeting", (req, res) => {
 
 app.post("/chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    console.log("CHAT BODY:", req.body);
 
-    state.conversationTurn++;
+    const result = await generateGeminiAnswer(req.body.message);
 
-    const agentKey = selectAgent(message);
-    const answer = await generateAnswer(agentKey, message);
+    console.log("GEMINI RESULT:", result);
 
     res.json({
-      agent: {
-        key: agentKey,
-        name: agents[agentKey].name,
-        emoji: agents[agentKey].emoji,
-      },
-      answer,
+      reply: result?.reply || "응답을 만들지 못했어요.",
+      emoji: result?.emoji || "🙂",
     });
+  } catch (error) {
+    console.error("CHAT ERROR:", error);
+
+    res.status(500).json({
+      error: error.message,
+      emoji: "⚠️",
+      reply: "서버 오류가 발생했어요.",
+    });
+  }
+});
 
   } catch (err) {
     res.status(500).json({ error: "fail" });

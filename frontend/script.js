@@ -103,6 +103,11 @@ async function sendMessage() {
     });
 
     const data = await res.json();
+    if (!res.ok || !data.agent) {
+      console.error("백엔드 에러:", data);
+      addMessage(`서버 오류: ${data.error || "알 수 없는 오류"}`, "system");
+      return;
+    }
 
     // ⭐ 로딩 제거
     clearInterval(loader.interval);
